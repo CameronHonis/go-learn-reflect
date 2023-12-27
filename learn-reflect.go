@@ -5,6 +5,11 @@ import (
 	"reflect"
 )
 
+func AbsorbArgs(args []reflect.Value) []reflect.Value {
+	fmt.Println("absorbed args: ", args)
+	return []reflect.Value{reflect.ValueOf(true)}
+}
+
 type MyStruct struct {
 	A   int
 	Bee string
@@ -160,8 +165,41 @@ func a() {
 	o := &MyStruct{A: 1, Bee: "bee", See: 3.14}
 	nType := reflect.TypeOf(n)
 	oType := reflect.TypeOf(o)
-	fmt.Println(nType.Method(0) == nType.Method(0))           // the control, false?
-	fmt.Println(nType.Method(0).Func == nType.Method(0).Func) // the control, false?
-	fmt.Println(nType.Method(0).Func == oType.Method(0).Func) // unsurprisingly, false
-	// A. No, even the control is false. So calling Method on a Type must generate a new function definition for each
+	fmt.Println(nType.Method(0) == nType.Method(0))         // the control, false?
+	fmt.Println(nType.Method(0).Func, nType.Method(0).Func) // the control, same address (but compares as false?)
+	fmt.Println(nType.Method(0).Func, oType.Method(0).Func) // the same address (but compares as false?)
+	// Yes, the Method derived from a struct Type points to a shared function definition.
+
+	// Q. Can I compare reflect.ValueOf(struct.method) to reflect.ValueOf(struct).Method ?
+	p := &MyStruct{A: 1, Bee: "bee", See: 3.14}
+	pVal := reflect.ValueOf(p)
+	pMethod := pVal.Method(0)
+	fmt.Println(reflect.ValueOf(p.Foo), reflect.ValueOf(p.Foo))  // control, the same address (but compares as false?)
+	fmt.Println(reflect.ValueOf(p.Foo), pMethod)                 // different addresses
+	fmt.Println(reflect.ValueOf(p.Foo).Type() == pMethod.Type()) // true
+	// A. No. Only the types remain equal.
+
+	// Q. Can I stub methods using Value.Set()?
+	q := &MyStruct{A: 1, Bee: "bee", See: 3.14}
+	qVal := reflect.ValueOf(q)
+	qValMethod := qVal.Method(0)
+	qNewMethod := reflect.MakeFunc(qValMethod.Type(), AbsorbArgs)
+	fmt.Println(qValMethod.CanInterface()) // true
+	fmt.Println(qNewMethod.CanInterface()) // true
+	fmt.Println(qValMethod.Type())         // func(int) bool
+	//qValMethod.Set(qNewMethod)             // panic: reflect: reflect.Value.Set using unaddressable value
+
+	qMethod := reflect.ValueOf(q.Foo)
+	qNewMethod = reflect.MakeFunc(qMethod.Type(), AbsorbArgs)
+	fmt.Println(qMethod.Kind()) // func
+	//qMethod.Set(qMethod) // panic: reflect: reflect.Value.Set using unaddressable value
+
+	qType := qVal.Type()
+	qTypeMethod := qType.Method(0).Func
+	qNewMethod = reflect.MakeFunc(qTypeMethod.Type(), AbsorbArgs)
+	fmt.Println(qTypeMethod.Kind()) // func
+	//qTypeMethod.Set(qNewMethod)     // panic: reflect: reflect.Value.Set using unaddressable value
+	fmt.Println(qValMethod.CanSet(), qMethod.CanSet(), qTypeMethod.CanSet()) // false false false
+	// A. No, calling Set() on a method results in an unaddressable value panic.
+
 }
