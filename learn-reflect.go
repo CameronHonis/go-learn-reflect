@@ -106,4 +106,16 @@ func a() {
 	fmt.Println(iVal.Type())   // *main.MyStruct
 	fmt.Println(iVal.Kind())   // ptr
 	fmt.Println(iVal.String()) // <*main.MyStruct Value>
+	fmt.Println(iVal.Elem())   // <invalid reflect.Value>
+	//fmt.Println(iVal.Elem().Type()) // panic: reflect: call of reflect.Value.Type on zero Value
+	// A. Getting the type from an invalid reflect.Value panics
+
+	// Q. Can I retrieve the function signature of a nil func pointer?
+	var j func(int) int
+	jVal := reflect.ValueOf(j)
+	fmt.Println(jVal)          // <invalid reflect.Value>
+	fmt.Println(jVal.String()) // <invalid reflect.Value>
+	fmt.Println(jVal.Type())   // func(int) int
+	// A. Yes, this works differently than nil pointers to structs.
+
 }
