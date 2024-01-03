@@ -202,4 +202,15 @@ func a() {
 	fmt.Println(qValMethod.CanSet(), qMethod.CanSet(), qTypeMethod.CanSet()) // false false false
 	// A. No, calling Set() on a method results in an unaddressable value panic.
 
+	// Q. Does calling NumMethod, Method, etc. on a (ptr vs struct) &| (type vs val) act differently?
+	r := &MyStruct{A: 1, Bee: "bee", See: 3.14}
+	rPtrVal := reflect.ValueOf(r)
+	rPtrType := reflect.TypeOf(r)
+	rVal := rPtrVal.Elem()
+	rType := rPtrType.Elem()
+	fmt.Println(rPtrVal.NumMethod())  // 1
+	fmt.Println(rPtrType.NumMethod()) // 1
+	fmt.Println(rVal.NumMethod())     // 0
+	fmt.Println(rType.NumMethod())    // 0
+	// A. Yes, NumMethod is sensitive to the method receiver type (ptr vs raw)
 }
